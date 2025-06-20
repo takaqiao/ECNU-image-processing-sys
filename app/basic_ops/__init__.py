@@ -1,1 +1,0 @@
-# This directory contains basic image processing operations.
