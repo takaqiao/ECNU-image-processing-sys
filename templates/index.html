@@ -120,11 +120,16 @@
         border-color: var(--primary-color);
       }
 
-      #paramsContainer input[type="number"] {
+      #paramsContainer input[type="number"],
+      #paramsContainer input[type="range"] {
         width: 80px;
         padding: 0.8rem;
         border: 1px solid var(--border-color);
         border-radius: 8px;
+        vertical-align: middle;
+      }
+      #paramsContainer label {
+        vertical-align: middle;
       }
 
       input[type="file"] {
@@ -284,7 +289,15 @@
           />
           <div id="operation-buttons" class="operation-buttons"></div>
         </div>
-        <div id="paramsContainer" style="margin-top: 1rem; display: none"></div>
+        <div
+          id="paramsContainer"
+          style="
+            margin-top: 1rem;
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+          "
+        ></div>
       </div>
     </div>
 
@@ -317,6 +330,11 @@
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const operationsData = {
+          图像变换: [
+            { name: "直方图均衡化", id: "histogram_equalization" },
+            { name: "绘制直方图", id: "plot_histogram" },
+            { name: "二值化", id: "binarize", params: true },
+          ],
           几何变换: [
             { name: "水平翻转", id: "horizontal_flip" },
             { name: "垂直翻转", id: "vertical_flip" },
@@ -326,17 +344,34 @@
             { name: "平移", id: "panning", params: true },
             { name: "旋转", id: "rotation", params: true },
           ],
-          边缘检测: [
+          空域滤波: [
+            { name: "中值滤波", id: "median_filter", params: true },
+            { name: "空域锐化", id: "sharpen" },
+          ],
+          边缘与线条: [
             { name: "Roberts算子", id: "roberts_edge" },
             { name: "Sobel算子", id: "sobel_edge" },
             { name: "Laplacian算子", id: "laplacian_edge" },
             { name: "Canny算子", id: "canny_edge", params: true },
+            { name: "霍夫直线检测", id: "hough_transform" },
           ],
           形态学: [
             { name: "腐蚀", id: "erosion", params: true },
             { name: "膨胀", id: "dilation", params: true },
             { name: "开运算", id: "open_op", params: true },
             { name: "闭运算", id: "close_op", params: true },
+          ],
+          噪声模拟: [
+            {
+              name: "添加椒盐噪声",
+              id: "add_salt_and_pepper_noise",
+              params: true,
+            },
+            { name: "添加高斯噪声", id: "add_gaussian_noise" },
+          ],
+          "频域处理(高级)": [
+            { name: "频域平滑(低通)", id: "fft_lowpass", params: true },
+            { name: "频域锐化(高通)", id: "fft_highpass", params: true },
           ],
           风格迁移: [
             { name: "糖果", id: "style_candy" },
@@ -383,7 +418,6 @@
 
         // --- Initialize ---
         function init() {
-          // Create category buttons
           for (const category in operationsData) {
             const btn = document.createElement("button");
             btn.className = "control-btn";
@@ -399,19 +433,16 @@
           const selectedBtn = e.target;
           const category = selectedBtn.dataset.category;
 
-          // Update active state for category buttons
           categoryButtonsContainer
             .querySelectorAll(".control-btn")
             .forEach((b) => b.classList.remove("active"));
           selectedBtn.classList.add("active");
 
-          // Reset sub-operations
           operationButtons.innerHTML = "";
           paramsContainer.style.display = "none";
           paramsContainer.innerHTML = "";
           selectedOperationId = null;
 
-          // Populate sub-operation buttons
           operationsData[category].forEach((op) => {
             const opBtn = document.createElement("button");
             opBtn.className = "control-btn";
@@ -430,13 +461,11 @@
           selectedOperationId = selectedBtn.dataset.id;
           const hasParams = selectedBtn.dataset.hasParams === "true";
 
-          // Update active state for operation buttons
           operationButtons
             .querySelectorAll(".control-btn")
             .forEach((b) => b.classList.remove("active"));
           selectedBtn.classList.add("active");
 
-          // Show/hide params
           paramsContainer.innerHTML = "";
           if (hasParams) {
             populateParams(selectedOperationId);
@@ -447,37 +476,54 @@
         }
 
         function populateParams(opId) {
-          const addInput = (name, label, type, value, step) =>
-            `<label for="${name}" style="margin-left: 1rem;">${label}:</label><input type="${type}" id="${name}" name="${name}" value="${value}" ${
+          const addInput = (name, label, type, value, step, min, max) =>
+            `<label for="${name}">${label}:</label><input type="${type}" id="${name}" name="${name}" value="${value}" ${
               step ? `step="${step}"` : ""
-            }>`;
+            } ${min ? `min="${min}"` : ""} ${max ? `max="${max}"` : ""}>`;
+          const addSlider = (name, label, value, min, max, step) =>
+            `<label for="${name}">${label}:</label><input type="range" id="${name}" name="${name}" value="${value}" min="${min}" max="${max}" step="${step}"><span id="${name}-value">${value}</span>`;
 
-          if (opId === "bilinear_interpolation")
-            paramsContainer.innerHTML =
+          let content = "";
+          if (opId === "binarize")
+            content = addSlider("threshold", "阈值", 127, 0, 255, 1);
+          else if (opId === "median_filter")
+            content = addInput("ksize", "核大小(奇数)", "number", 5, 2, 3);
+          else if (opId === "add_salt_and_pepper_noise")
+            content = addSlider("amount", "噪声比例", 0.04, 0, 0.2, 0.01);
+          else if (opId === "fft_lowpass" || opId === "fft_highpass")
+            content = addInput("radius", "半径", "number", 30, 1);
+          else if (opId === "bilinear_interpolation")
+            content =
               addInput("fx", "X缩放", "number", 1.5, 0.1) +
               addInput("fy", "Y缩放", "number", 1.5, 0.1);
           else if (opId === "panning")
-            paramsContainer.innerHTML =
+            content =
               addInput("dx", "X平移", "number", 50) +
               addInput("dy", "Y平移", "number", 50);
           else if (opId === "rotation")
-            paramsContainer.innerHTML =
+            content =
               addInput("angle", "角度", "number", 45) +
               addInput("scale", "缩放", "number", 1.0, 0.1);
           else if (opId === "canny_edge")
-            paramsContainer.innerHTML =
+            content =
               addInput("thres1", "低阈值", "number", 50) +
               addInput("thres2", "高阈值", "number", 150);
           else if (
             ["erosion", "dilation", "open_op", "close_op"].includes(opId)
           )
-            paramsContainer.innerHTML = addInput(
-              "ksize",
-              "核大小",
-              "number",
-              5,
-              2
-            );
+            content = addInput("ksize", "核大小", "number", 5, 2, 3);
+
+          paramsContainer.innerHTML = content;
+
+          // Add event listener for sliders to update their value display
+          paramsContainer
+            .querySelectorAll('input[type="range"]')
+            .forEach((slider) => {
+              slider.addEventListener("input", (e) => {
+                document.getElementById(`${e.target.id}-value`).textContent =
+                  e.target.value;
+              });
+            });
         }
 
         imageLoader.addEventListener("change", (e) => {
@@ -541,23 +587,6 @@
                     }</b> (置信度: ${d.confidence.toFixed(2)})</li>`;
                   });
                   html += "</ul>";
-                }
-                if (data.text) {
-                  html += `<h4>OCR识别文本:</h4><pre>${data.text}</pre>`;
-                }
-                if (data.entities) {
-                  html += `<h4>医学实体识别:</h4>`;
-                  if (data.entities.length > 0) {
-                    html += "<ul>";
-                    data.entities.forEach((e) => {
-                      html += `<li><b>${e.text}</b> (${e.label}) ${
-                        e.is_negated ? "[被否定]" : ""
-                      }</li>`;
-                    });
-                    html += "</ul>";
-                  } else {
-                    html += "<p>未识别到医学实体。</p>";
-                  }
                 }
                 outputTextResults.innerHTML = html;
                 outputTextResults.style.display = "block";
