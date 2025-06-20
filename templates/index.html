@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>全功能图像处理系统</title>
+    <!-- 引入更现代的字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #4a90e2;
+        --secondary-color: #50e3c2;
+        --bg-color: #f4f7f6;
+        --panel-bg: #ffffff;
+        --text-color: #333;
+        --light-text-color: #777;
+        --border-color: #e0e0e0;
+        --shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes popIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      body {
+        font-family: "Noto Sans SC", sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 2rem;
+        animation: fadeIn 0.8s ease-out;
+      }
+
+      h1 {
+        font-weight: 700;
+        font-size: 2.5rem;
+        color: var(--primary-color);
+      }
+
+      /* --- 全局控制栏 --- */
+      .controls-bar {
+        background: var(--panel-bg);
+        border-radius: 12px;
+        padding: 1.5rem 2rem;
+        box-shadow: var(--shadow);
+        width: 100%;
+        max-width: 1200px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+        animation: fadeIn 1s ease-out 0.2s backwards;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+      }
+
+      /* --- 按钮式选择 --- */
+      .category-buttons,
+      .operation-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+      }
+      .operation-buttons {
+        margin-top: 1rem;
+        animation: popIn 0.4s ease-out;
+      }
+
+      .control-btn {
+        padding: 0.6rem 1.2rem;
+        border: 2px solid var(--border-color);
+        background-color: transparent;
+        color: var(--light-text-color);
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s ease;
+      }
+      .control-btn:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+      }
+      .control-btn.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+      #paramsContainer input[type="number"] {
+        width: 80px;
+        padding: 0.8rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+      .file-upload-label {
+        padding: 0.8rem 1.5rem;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+      .file-upload-label:hover {
+        opacity: 0.9;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      #processBtn {
+        margin-left: auto;
+        padding: 0.8rem 2rem;
+        font-size: 1rem;
+        font-weight: 700;
+        color: white;
+        background-image: linear-gradient(
+          45deg,
+          var(--secondary-color),
+          var(--primary-color)
+        );
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      #processBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .main-container {
+        display: flex;
+        gap: 2rem;
+        width: 100%;
+        max-width: 1200px;
+        animation: fadeIn 1s ease-out 0.4s backwards;
+      }
+
+      .panel {
+        flex: 1;
+        background: var(--panel-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        transition: transform 0.3s ease;
+      }
+      .panel:hover {
+        transform: translateY(-5px);
+      }
+
+      .image-box {
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+        width: 100%;
+        height: 450px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--bg-color);
+        position: relative;
+      }
+
+      .image-box .placeholder {
+        color: var(--light-text-color);
+        font-weight: 500;
+      }
+      .image-box img {
+        max-width: 100%;
+        max-height: 100%;
+        height: auto;
+        width: auto;
+        border-radius: 8px;
+        display: none;
+      }
+      .image-box img.visible {
+        display: block;
+      }
+
+      .loader {
+        border: 6px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 6px solid var(--primary-color);
+        width: 50px;
+        height: 50px;
+        animation: spin 1.5s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .results-box {
+        margin-top: 15px;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background-color: var(--bg-color);
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .results-box h4 {
+        margin-top: 0;
+        color: var(--primary-color);
+      }
+      .results-box ul {
+        padding-left: 20px;
+        list-style-type: "🎨";
+      }
+      .results-box pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background: #e9eef2;
+        padding: 1rem;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <h1>全功能图像处理系统</h1>
+      <p>一个集成了经典算法与现代AI的强大工具</p>
+    </header>
+
+    <!-- 全局控制栏 -->
+    <div class="controls-bar">
+      <div class="control-row">
+        <label for="imageLoader" class="file-upload-label">选择图片文件</label>
+        <input type="file" id="imageLoader" accept="image/*" />
+        <span id="fileName">未选择文件</span>
+        <button id="processBtn">处理图像</button>
+      </div>
+      <div id="operation-panel">
+        <div id="category-buttons" class="category-buttons"></div>
+        <div id="operation-buttons-container" style="display: none">
+          <hr
+            style="
+              margin: 1.5rem 0;
+              border: none;
+              border-top: 1px solid var(--border-color);
+            "
+          />
+          <div id="operation-buttons" class="operation-buttons"></div>
+        </div>
+        <div id="paramsContainer" style="margin-top: 1rem; display: none"></div>
+      </div>
+    </div>
+
+    <div class="main-container">
+      <!-- 输入面板 -->
+      <div class="panel">
+        <h2>输入</h2>
+        <div class="image-box">
+          <span class="placeholder" id="originalPlaceholder">请上传图像</span>
+          <img id="originalImage" src="" />
+        </div>
+      </div>
+
+      <!-- 输出面板 -->
+      <div class="panel">
+        <h2>输出</h2>
+        <div class="image-box" id="outputImageBox">
+          <div id="loader" class="loader" style="display: none"></div>
+          <span class="placeholder" id="processedPlaceholder">等待处理...</span>
+          <img id="processedImage" src="" />
+        </div>
+        <div
+          id="outputTextResults"
+          class="results-box"
+          style="display: none"
+        ></div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const operationsData = {
+          几何变换: [
+            { name: "水平翻转", id: "horizontal_flip" },
+            { name: "垂直翻转", id: "vertical_flip" },
+            { name: "对角翻转", id: "cross_flip" },
+            { name: "仿射变换", id: "affine_transform" },
+            { name: "缩放", id: "bilinear_interpolation", params: true },
+            { name: "平移", id: "panning", params: true },
+            { name: "旋转", id: "rotation", params: true },
+          ],
+          边缘检测: [
+            { name: "Roberts算子", id: "roberts_edge" },
+            { name: "Sobel算子", id: "sobel_edge" },
+            { name: "Laplacian算子", id: "laplacian_edge" },
+            { name: "Canny算子", id: "canny_edge", params: true },
+          ],
+          形态学: [
+            { name: "腐蚀", id: "erosion", params: true },
+            { name: "膨胀", id: "dilation", params: true },
+            { name: "开运算", id: "open_op", params: true },
+            { name: "闭运算", id: "close_op", params: true },
+          ],
+          风格迁移: [
+            { name: "糖果", id: "style_candy" },
+            { name: "抽象油画", id: "style_composition_vii" },
+            { name: "羽毛", id: "style_feathers" },
+            { name: "缪斯", id: "style_la_muse" },
+            { name: "马赛克", id: "style_mosaic" },
+            { name: "星夜", id: "style_starry_night" },
+            { name: "呐喊", id: "style_the_scream" },
+            { name: "海浪", id: "style_the_wave" },
+            { name: "Udnie", id: "style_udnie" },
+          ],
+          YOLOv8应用实现: [
+            { name: "通用目标检测", id: "yolov8_detect" },
+            { name: "PCB缺陷检测", id: "pcb_defect_check" },
+            { name: "X光骨折检测", id: "bone_fracture_detect" },
+          ],
+        };
+
+        // --- DOM Elements ---
+        const imageLoader = document.getElementById("imageLoader");
+        const originalImage = document.getElementById("originalImage");
+        const processedImage = document.getElementById("processedImage");
+        const categoryButtonsContainer =
+          document.getElementById("category-buttons");
+        const operationButtonsContainer = document.getElementById(
+          "operation-buttons-container"
+        );
+        const operationButtons = document.getElementById("operation-buttons");
+        const paramsContainer = document.getElementById("paramsContainer");
+        const processBtn = document.getElementById("processBtn");
+        const loader = document.getElementById("loader");
+        const outputTextResults = document.getElementById("outputTextResults");
+        const fileNameSpan = document.getElementById("fileName");
+        const originalPlaceholder = document.getElementById(
+          "originalPlaceholder"
+        );
+        const processedPlaceholder = document.getElementById(
+          "processedPlaceholder"
+        );
+
+        let originalFile = null;
+        let selectedOperationId = null;
+
+        // --- Initialize ---
+        function init() {
+          // Create category buttons
+          for (const category in operationsData) {
+            const btn = document.createElement("button");
+            btn.className = "control-btn";
+            btn.textContent = category;
+            btn.dataset.category = category;
+            categoryButtonsContainer.appendChild(btn);
+            btn.addEventListener("click", handleCategoryClick);
+          }
+        }
+
+        // --- Event Handlers ---
+        function handleCategoryClick(e) {
+          const selectedBtn = e.target;
+          const category = selectedBtn.dataset.category;
+
+          // Update active state for category buttons
+          categoryButtonsContainer
+            .querySelectorAll(".control-btn")
+            .forEach((b) => b.classList.remove("active"));
+          selectedBtn.classList.add("active");
+
+          // Reset sub-operations
+          operationButtons.innerHTML = "";
+          paramsContainer.style.display = "none";
+          paramsContainer.innerHTML = "";
+          selectedOperationId = null;
+
+          // Populate sub-operation buttons
+          operationsData[category].forEach((op) => {
+            const opBtn = document.createElement("button");
+            opBtn.className = "control-btn";
+            opBtn.textContent = op.name;
+            opBtn.dataset.id = op.id;
+            opBtn.dataset.hasParams = op.params || false;
+            operationButtons.appendChild(opBtn);
+            opBtn.addEventListener("click", handleOperationClick);
+          });
+
+          operationButtonsContainer.style.display = "block";
+        }
+
+        function handleOperationClick(e) {
+          const selectedBtn = e.target;
+          selectedOperationId = selectedBtn.dataset.id;
+          const hasParams = selectedBtn.dataset.hasParams === "true";
+
+          // Update active state for operation buttons
+          operationButtons
+            .querySelectorAll(".control-btn")
+            .forEach((b) => b.classList.remove("active"));
+          selectedBtn.classList.add("active");
+
+          // Show/hide params
+          paramsContainer.innerHTML = "";
+          if (hasParams) {
+            populateParams(selectedOperationId);
+            paramsContainer.style.display = "flex";
+          } else {
+            paramsContainer.style.display = "none";
+          }
+        }
+
+        function populateParams(opId) {
+          const addInput = (name, label, type, value, step) =>
+            `<label for="${name}" style="margin-left: 1rem;">${label}:</label><input type="${type}" id="${name}" name="${name}" value="${value}" ${
+              step ? `step="${step}"` : ""
+            }>`;
+
+          if (opId === "bilinear_interpolation")
+            paramsContainer.innerHTML =
+              addInput("fx", "X缩放", "number", 1.5, 0.1) +
+              addInput("fy", "Y缩放", "number", 1.5, 0.1);
+          else if (opId === "panning")
+            paramsContainer.innerHTML =
+              addInput("dx", "X平移", "number", 50) +
+              addInput("dy", "Y平移", "number", 50);
+          else if (opId === "rotation")
+            paramsContainer.innerHTML =
+              addInput("angle", "角度", "number", 45) +
+              addInput("scale", "缩放", "number", 1.0, 0.1);
+          else if (opId === "canny_edge")
+            paramsContainer.innerHTML =
+              addInput("thres1", "低阈值", "number", 50) +
+              addInput("thres2", "高阈值", "number", 150);
+          else if (
+            ["erosion", "dilation", "open_op", "close_op"].includes(opId)
+          )
+            paramsContainer.innerHTML = addInput(
+              "ksize",
+              "核大小",
+              "number",
+              5,
+              2
+            );
+        }
+
+        imageLoader.addEventListener("change", (e) => {
+          if (e.target.files && e.target.files[0]) {
+            originalFile = e.target.files[0];
+            fileNameSpan.textContent = originalFile.name;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              originalImage.src = event.target.result;
+              originalImage.classList.add("visible");
+              originalPlaceholder.style.display = "none";
+            };
+            reader.readAsDataURL(originalFile);
+          }
+        });
+
+        processBtn.addEventListener("click", () => {
+          if (!originalFile || !selectedOperationId) {
+            alert("请先上传图片并选择一个具体操作！");
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append("image", originalFile);
+          formData.append("operation", selectedOperationId);
+          paramsContainer
+            .querySelectorAll("input")
+            .forEach((input) => formData.append(input.name, input.value));
+
+          processedImage.classList.remove("visible");
+          processedPlaceholder.style.display = "none";
+          outputTextResults.style.display = "none";
+          loader.style.display = "block";
+
+          fetch("/api/process", { method: "POST", body: formData })
+            .then((response) => {
+              if (!response.ok)
+                throw new Error(`HTTP error! status: ${response.status}`);
+              return response.json();
+            })
+            .then((data) => {
+              if (data.error) throw new Error(data.error);
+
+              if (data.image) {
+                processedImage.src = "data:image/jpeg;base64," + data.image;
+                processedImage.classList.add("visible");
+              } else {
+                processedPlaceholder.style.display = "block";
+              }
+              if (
+                data.text ||
+                (data.detections && data.detections.length > 0)
+              ) {
+                let html = "";
+                if (data.detections && data.detections.length > 0) {
+                  html += `<h4>检测到 ${data.detections.length} 个目标:</h4>`;
+                  html += "<ul>";
+                  data.detections.forEach((d) => {
+                    html += `<li><b>${
+                      d.class
+                    }</b> (置信度: ${d.confidence.toFixed(2)})</li>`;
+                  });
+                  html += "</ul>";
+                }
+                if (data.text) {
+                  html += `<h4>OCR识别文本:</h4><pre>${data.text}</pre>`;
+                }
+                if (data.entities) {
+                  html += `<h4>医学实体识别:</h4>`;
+                  if (data.entities.length > 0) {
+                    html += "<ul>";
+                    data.entities.forEach((e) => {
+                      html += `<li><b>${e.text}</b> (${e.label}) ${
+                        e.is_negated ? "[被否定]" : ""
+                      }</li>`;
+                    });
+                    html += "</ul>";
+                  } else {
+                    html += "<p>未识别到医学实体。</p>";
+                  }
+                }
+                outputTextResults.innerHTML = html;
+                outputTextResults.style.display = "block";
+              }
+            })
+            .catch((error) => {
+              alert("处理失败: " + error.message);
+              processedPlaceholder.textContent = "处理失败";
+              processedPlaceholder.style.display = "block";
+            })
+            .finally(() => {
+              loader.style.display = "none";
+            });
+        });
+
+        init();
+      });
+    </script>
+  </body>
+</html>
